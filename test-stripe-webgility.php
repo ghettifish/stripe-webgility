@@ -30,7 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 function webgility_stripe_missing_wc_notice() {
 	/* translators: 1. URL link. */
-	echo '<div class="error"><p><strong>' . sprintf( esc_html__( 'Stripe requires WooCommerce to be installed and active. You can download %s here.', 'woocommerce-gateway-stripe' ), '<a href="https://woocommerce.com/" target="_blank">WooCommerce</a>' ) . '</strong></p></div>';
+	echo '<div class="error"><p><strong>' . sprintf( esc_html__( 'Webgility Stripe requires WooCommerce to be installed and active. You can download %s here.', 'woocommerce-gateway-stripe' ), '<a href="https://woocommerce.com/" target="_blank">WooCommerce</a>' ) . '</strong></p></div>';
 }
 
 add_action( 'plugins_loaded', 'webgility_gateway_stripe_init' );
@@ -112,6 +112,10 @@ function webgility_gateway_stripe_init() {
 				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-payment-gateway.php';
 				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-logger.php';
 				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-helper.php';
+				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-payment-tokens.php';
+				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-customer.php';
+				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-exception.php';
+				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-webhook-handler.php';
 				 
 				add_filter( 'woocommerce_payment_gateways', array( $this, 'add_gateways' ) );
 				add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'plugin_action_links' ) );

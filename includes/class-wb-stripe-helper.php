@@ -386,7 +386,7 @@ class WB_Stripe_Helper {
 	 * @return string
 	 */
 	public static function get_webhook_url() {
-		return add_query_arg( 'wc-api', 'wc_stripe', trailingslashit( get_home_url() ) );
+		return add_query_arg( 'wc-api', 'wb_stripe', trailingslashit( get_home_url() ) );
 	}
 
 	/**

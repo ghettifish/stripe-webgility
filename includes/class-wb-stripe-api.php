@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * WC_Stripe_API class.
+ * WB_Stripe_API class.
  *
  * Communicates with Stripe API.
  */
@@ -108,7 +108,7 @@ class WB_Stripe_API {
 		if ( 'charges' === $api && 'POST' === $method ) {
 			$customer        = ! empty( $request['customer'] ) ? $request['customer'] : '';
 			$source          = ! empty( $request['source'] ) ? $request['source'] : $customer;
-			$idempotency_key = apply_filters( 'wc_stripe_idempotency_key', $request['metadata']['order_id'] . '-' . $source, $request );
+			$idempotency_key = apply_filters( 'wb_stripe_idempotency_key', $request['metadata']['order_id'] . '-' . $source, $request );
 
 			$headers['Idempotency-Key'] = $idempotency_key;
 		}
@@ -124,7 +124,7 @@ class WB_Stripe_API {
 		);
 
 		if ( is_wp_error( $response ) || empty( $response['body'] ) ) {
-			WC_Stripe_Logger::log(
+			WB_Stripe_Logger::log(
 				'Error Response: ' . print_r( $response, true ) . PHP_EOL . PHP_EOL . 'Failed request: ' . print_r(
 					array(
 						'api'             => $api,
@@ -135,7 +135,7 @@ class WB_Stripe_API {
 				)
 			);
 
-			throw new WC_Stripe_Exception( print_r( $response, true ), __( 'There was a problem connecting to the Stripe API endpoint.', 'woocommerce-gateway-stripe' ) );
+			throw new WB_Stripe_Exception( print_r( $response, true ), __( 'There was a problem connecting to the Stripe API endpoint.', 'woocommerce-gateway-stripe' ) );
 		}
 
 		if ( $with_headers ) {
@@ -156,7 +156,7 @@ class WB_Stripe_API {
 	 * @param string $api
 	 */
 	public static function retrieve( $api ) {
-		WC_Stripe_Logger::log( "{$api}" );
+		WB_Stripe_Logger::log( "{$api}" );
 
 		$response = wp_safe_remote_get(
 			self::ENDPOINT . $api,
@@ -168,7 +168,7 @@ class WB_Stripe_API {
 		);
 
 		if ( is_wp_error( $response ) || empty( $response['body'] ) ) {
-			WC_Stripe_Logger::log( 'Error Response: ' . print_r( $response, true ) );
+			WB_Stripe_Logger::log( 'Error Response: ' . print_r( $response, true ) );
 			return new WP_Error( 'stripe_error', __( 'There was a problem connecting to the Stripe API endpoint.', 'woocommerce-gateway-stripe' ) );
 		}
 
