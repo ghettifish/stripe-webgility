@@ -116,6 +116,7 @@ function webgility_gateway_stripe_init() {
 				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-customer.php';
 				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-exception.php';
 				require_once dirname( __FILE__ ) . '/includes/class-wb-stripe-webhook-handler.php';
+				require_once dirname( __FILE__ ) . '/includes/admin/customer-mgmt.php';
 				 
 				add_filter( 'woocommerce_payment_gateways', array( $this, 'add_gateways' ) );
 				add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'plugin_action_links' ) );

@@ -766,18 +766,26 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 					}
 				}
 
-				WB_Stripe_Logger::log( "Info: Begin processing payment for order $order_id for the amount of {$order->get_total()}" );
+				WB_Stripe_Logger::log("Info: Set customer to pending.");
+				
+				//TO-DO: Link the form submission data for stripe cards.
+				//Link to associated card
+				add_post_meta($order_id, "_linked_token_id", "1", true);
+
+
+				//Things are quite a bit different from this original code:
+				//WB_Stripe_Logger::log( "Info: Begin processing payment for order $order_id for the amount of {$order->get_total()}" );
 
 				/* If we're doing a retry and source is chargeable, we need to pass
 				 * a different idempotency key and retry for success.
 				 */
-				if ( $this->need_update_idempotency_key( $prepared_source->source_object, $previous_error ) ) {
-					add_filter( 'wb_stripe_idempotency_key', array( $this, 'change_idempotency_key' ), 10, 2 );
-				}
+				// if ( $this->need_update_idempotency_key( $prepared_source->source_object, $previous_error ) ) {
+				// 	add_filter( 'wb_stripe_idempotency_key', array( $this, 'change_idempotency_key' ), 10, 2 );
+				// }
 
 				// Make the request.
-				$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
-
+				//$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
+				
 				if ( ! empty( $response->error ) ) {
 					// Customer param wrong? The user may have been deleted on stripe's end. Remove customer_id. Can be retried without.
 					if ( $this->is_no_such_customer_error( $response->error ) ) {
