@@ -71,7 +71,7 @@ class WB_Stripe_Payment_Tokens {
 		$has_token = false;
 
 		foreach ( $gateways as $gateway ) {
-			$tokens = WC_Payment_Tokens::get_customer_tokens( $customer_id, $gateway );
+			$tokens = 1;
 
 			if ( ! empty( $tokens ) ) {
 				$has_token = true;

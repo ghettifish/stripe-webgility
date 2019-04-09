@@ -10,15 +10,18 @@ function associated_credit_cards($order) {
     $token_id = get_post_meta($order_id, "_linked_token_id");
     
     $wtf = WC_Payment_Tokens::get($token_id[0]);
+    $token = $wtf->get_token();
     $data = $wtf->get_last4();
     $html = sprintf(
         '
         <div>
             <h3>Associated Credit Card</h3>
-            <p>Last four: %1$s</p>
+            <p>Last four: %s</p>
+            <input type="hidden" id="stripe_token" name="selected_payment_token" value="%s">
         </div>
         ',
-        $data
+        $data,
+        $token
     );
     echo $html;
     }
@@ -34,12 +37,11 @@ function associated_credit_cards($order) {
 
     function my_action() {
         global $wpdb; // this is how you get access to the database
+        $order_id = intval( $_POST['whatever'] );
+        $stripe_gateway = new WB_Gateway_Stripe;
+        $stripe_gateway->process_payment($order_id);
 
-        $whatever = intval( $_POST['whatever'] );
-
-        $whatever += 10;
-
-            echo $whatever;
+        				//$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
 
         wp_die(); // this is required to terminate immediately and return a proper response
     }
@@ -48,10 +50,10 @@ function associated_credit_cards($order) {
     function my_action_javascript() { ?>
         <script type="text/javascript" >
         jQuery(document).ready(function($) {
-
             var data = {
                 'action': 'my_action',
-                'whatever': 1234
+                'whatever': jQuery("#post_ID").val(),
+                'stripe_token': jQuery("#stripe_token").val(),
             };
             jQuery("#chargeButton").click(function($) {
                 // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
