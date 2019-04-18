@@ -713,7 +713,7 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 				throw new WB_Stripe_Exception( print_r( $prepared_source, true ), $localized_message );
 			}
 
-			$this->save_source_to_order( $order, $prepared_source );
+ 			$this->save_source_to_order( $order, $prepared_source );
 
 			// Result from Stripe API request.
 			$response = null;
@@ -779,12 +779,12 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 				/* If we're doing a retry and source is chargeable, we need to pass
 				 * a different idempotency key and retry for success.
 				 */
-				// if ( $this->need_update_idempotency_key( $prepared_source->source_object, $previous_error ) ) {
-				// 	add_filter( 'wb_stripe_idempotency_key', array( $this, 'change_idempotency_key' ), 10, 2 );
-				// }
+				if ( $this->need_update_idempotency_key( $prepared_source->source_object, $previous_error ) ) {
+					add_filter( 'wb_stripe_idempotency_key', array( $this, 'change_idempotency_key' ), 10, 2 );
+				}
 
 				// Make the request.
-				//$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
+				$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
 				
 				if ( ! empty( $response->error ) ) {
 					// Customer param wrong? The user may have been deleted on stripe's end. Remove customer_id. Can be retried without.
@@ -812,7 +812,7 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 					if ( $this->is_retryable_error( $response->error ) ) {
 						if ( $retry ) {
 							// Don't do anymore retries after this.
-							if ( 5 <= $this->retry_interval ) {
+							if ( 2 <= $this->retry_interval ) {
 								return $this->process_payment( $order_id, false, $force_save_source, $response->error );
 							}
 

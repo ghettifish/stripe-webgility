@@ -8,7 +8,10 @@ function associated_credit_cards($order) {
 
     $order_id = $order->get_id();
     $token_id = get_post_meta($order_id, "_linked_token_id");
-    
+    $user = $order->get_user();
+    $user_id = $order->get_user_id();
+    $customer_token = get_user_meta($user_id, '_stripe_customer_id', true);
+
     $wtf = WC_Payment_Tokens::get($token_id[0]);
     $token = $wtf->get_token();
     $data = $wtf->get_last4();
@@ -18,10 +21,12 @@ function associated_credit_cards($order) {
             <h3>Associated Credit Card</h3>
             <p>Last four: %s</p>
             <input type="hidden" id="stripe_token" name="selected_payment_token" value="%s">
+            <input type="hidden" id="customer_token" name="customer_token" value="%s">
         </div>
         ',
         $data,
-        $token
+        $token,
+        $customer_token
     );
     echo $html;
     }
@@ -54,6 +59,7 @@ function associated_credit_cards($order) {
                 'action': 'my_action',
                 'whatever': jQuery("#post_ID").val(),
                 'stripe_token': jQuery("#stripe_token").val(),
+                'customer': jQuery("#customer_token").val()
             };
             jQuery("#chargeButton").click(function($) {
                 // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php

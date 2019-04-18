@@ -397,6 +397,7 @@ abstract class WB_Stripe_Payment_Gateway extends WC_Payment_Gateway_CC {
 			$post_data['customer'] = $prepared_source->customer;
 		}
 
+	
 		if ( $prepared_source->source ) {
 			$post_data['source'] = $prepared_source->source;
 		}
@@ -717,22 +718,13 @@ abstract class WB_Stripe_Payment_Gateway extends WC_Payment_Gateway_CC {
 			if ( $this->is_type_legacy_card( $source_id ) ) {
 				$is_token = true;
 			}
-		} elseif ( isset( $_POST['stripe_token'] ) && 'new' !== $_POST['stripe_token'] ) {
-			$stripe_token     = wc_clean( $_POST['stripe_token'] );
-			$maybe_saved_card = isset( $_POST[ 'wb-' . $payment_method . '-new-payment-method' ] ) && ! empty( $_POST[ 'wb-' . $payment_method . '-new-payment-method' ] );
+		} elseif ( isset( $_POST['customer'] )) {
+		
 
-			// This is true if the user wants to store the card to their account.
-			if ( ( $user_id && $this->saved_cards && $maybe_saved_card ) || $force_save_source ) {
-				$response = $customer->add_source( $stripe_token );
-
-				if ( ! empty( $response->error ) ) {
-					throw new WB_Stripe_Exception( print_r( $response, true ), $response->error->message );
-				}
 			} else {
-				$set_customer = false;
-				$source_id    = $stripe_token;
-				$is_token     = true;
-			}
+			$set_customer = false;
+			$source_id    = $stripe_token;
+			$is_token     = true;
 		}
 
 		if ( ! $set_customer ) {
