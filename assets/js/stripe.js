@@ -45,8 +45,6 @@ jQuery( function( $ ) {
 		},
 
 		mountElements: function() {
-			alert("mounting els");
-
 			if ( ! $( '#stripe-card-element' ).length ) {
 				return;
 			}
@@ -249,7 +247,6 @@ jQuery( function( $ ) {
 
 		// Check to see if Stripe in general is being used for checkout.
 		isStripeChosen: function() {
-			console.log( $( '#payment_method_webgility_stripe' ).is( ':checked' ) );
 			return $( '#payment_method_webgility_stripe, #payment_method_stripe_bancontact, #payment_method_stripe_sofort, #payment_method_stripe_giropay, #payment_method_stripe_ideal, #payment_method_stripe_alipay, #payment_method_stripe_sepa, #payment_method_stripe_eps, #payment_method_stripe_multibanco' ).is( ':checked' ) || ( $( '#payment_method_webgility_stripe' ).is( ':checked' ) && 'new' === $( 'input[name="wc-stripe-payment-token"]:checked' ).val() ) || ( $( '#payment_method_stripe_sepa' ).is( ':checked' ) && 'new' === $( 'input[name="wc-stripe-payment-token"]:checked' ).val() );
 		},
 
@@ -541,8 +538,6 @@ jQuery( function( $ ) {
 		},
 
 		sourceResponse: function( response ) {
-			alert("sourceResponse?");
-
 			if ( response.error ) {
 				$( document.body ).trigger( 'stripeError', response );
 			} else if ( 'no' === wb_stripe_params.allow_prepaid_card && 'card' === response.source.type && 'prepaid' === response.source.card.funding ) {
@@ -559,8 +554,6 @@ jQuery( function( $ ) {
 		},
 
 		processStripeResponse: function( source ) {
-			alert("stripeResponse?");
-
 			wb_stripe_form.reset();
 
 			// Insert the Source into the form so it gets submitted to the server.
@@ -574,7 +567,6 @@ jQuery( function( $ ) {
 		},
 
 		onSubmit: function( e ) {
-			alert("go!");
 			if ( ! wb_stripe_form.isStripeChosen() ) {
 				return;
 			}

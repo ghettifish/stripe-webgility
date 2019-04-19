@@ -131,7 +131,6 @@ jQuery( function( $ ) {
 				data.shipping_state      = shipping.region;
 				data.shipping_postcode   = shipping.postalCode;
 			}
-
 			return data;
 		},
 

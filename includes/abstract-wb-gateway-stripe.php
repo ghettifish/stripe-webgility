@@ -478,6 +478,7 @@ abstract class WB_Stripe_Payment_Gateway extends WC_Payment_Gateway_CC {
 				WB_Stripe_Helper::is_wc_lt( '3.0' ) ? $order->reduce_order_stock() : wc_reduce_stock_levels( $order_id );
 			}
 
+			//See if this is necessary
 			/* translators: transaction id */
 			$order->update_status( 'on-hold', sprintf( __( 'Stripe charge authorized (Charge ID: %s). Process order to take payment, or cancel to remove the pre-authorization.', 'woocommerce-gateway-stripe' ), $response->id ) );
 		}
@@ -718,21 +719,103 @@ abstract class WB_Stripe_Payment_Gateway extends WC_Payment_Gateway_CC {
 			if ( $this->is_type_legacy_card( $source_id ) ) {
 				$is_token = true;
 			}
-		} elseif ( isset( $_POST['customer'] )) {
-		
-
+		}  elseif ( isset( $_POST['stripe_token'] ) && 'new' !== $_POST['stripe_token'] ) {
+			$stripe_token     = wc_clean( $_POST['stripe_token'] );
+			$maybe_saved_card = isset( $_POST[ 'wb-' . $payment_method . '-new-payment-method' ] ) && ! empty( $_POST[ 'wb-' . $payment_method . '-new-payment-method' ] );
+			// This is true if the user wants to store the card to their account.
+			if ( ( $user_id && $this->saved_cards && $maybe_saved_card ) || $force_save_source ) {
+				$response = $customer->add_source( $stripe_token );
+				if ( ! empty( $response->error ) ) {
+					throw new WB_Stripe_Exception( print_r( $response, true ), $response->error->message );
+				}
 			} else {
-			$set_customer = false;
-			$source_id    = $stripe_token;
-			$is_token     = true;
+				$set_customer = false;
+				$source_id    = $stripe_token;
+				$is_token     = true;
+			}
 		}
-
-		if ( ! $set_customer ) {
+ 		if ( ! $set_customer ) {
 			$customer_id = false;
 		} else {
 			$test = $customer->get_id();
 			$customer_id = $customer->get_id() ? $customer->get_id() : false;
 		}
+
+		if ( empty( $source_object ) && ! $is_token ) {
+			$source_object = self::get_source_object( $source_id );
+		}
+
+		return (object) array(
+			'token_id'      => $wc_token_id,
+			'customer'      => $customer_id,
+			'source'        => $source_id,
+			'source_object' => $source_object,
+		);
+	}
+
+	public function admin_prepare_source( $user_id, $force_save_source = false ) {
+		$customer          = new WB_Stripe_Customer( $user_id );
+		$set_customer      = true;
+		$force_save_source = apply_filters( 'wb_stripe_force_save_source', $force_save_source, $customer );
+		$source_object     = '';
+		$source_id         = '';
+		$wc_token_id       = false;
+		$payment_method    = isset( $_POST['payment_method'] ) ? wc_clean( $_POST['payment_method'] ) : 'stripe';
+		$is_token          = false;
+
+		// New CC info was entered and we have a new source to process.
+		if ( ! empty( $_POST['stripe_source'] ) ) {
+			$source_object = self::get_source_object( wc_clean( $_POST['stripe_source'] ) );
+			$source_id     = $source_object->id;
+
+			// This checks to see if customer opted to save the payment method to file.
+			$maybe_saved_card = isset( $_POST[ 'wb-' . $payment_method . '-new-payment-method' ] ) && ! empty( $_POST[ 'wb-' . $payment_method . '-new-payment-method' ] );
+
+			/**
+			 * This is true if the user wants to store the card to their account.
+			 * Criteria to save to file is they are logged in, they opted to save or product requirements and the source is
+			 * actually reusable. Either that or force_save_source is true.
+			 */
+			if ( ( $user_id && $this->saved_cards && $maybe_saved_card && 'reusable' === $source_object->usage ) || $force_save_source ) {
+				$response = $customer->add_source( $source_object->id );
+
+				if ( ! empty( $response->error ) ) {
+					throw new WB_Stripe_Exception( print_r( $response, true ), $response->error->message );
+				}
+			}
+		} elseif ( $this->is_using_saved_payment_method() ) {
+			// Use an existing token, and then process the payment.
+			$wc_token_id = wc_clean( $_POST[ 'wb-' . $payment_method . '-payment-token' ] );
+			$wc_token    = WC_Payment_Tokens::get( $wc_token_id );
+
+			if ( ! $wc_token || $wc_token->get_user_id() !== get_current_user_id() ) {
+				WC()->session->set( 'refresh_totals', true );
+				throw new WB_Stripe_Exception( 'Invalid payment method', __( 'Invalid payment method. Please input a new card number.', 'woocommerce-gateway-stripe' ) );
+			}
+
+			$source_id = $wc_token->get_token();
+
+			if ( $this->is_type_legacy_card( $source_id ) ) {
+				$is_token = true;
+			}
+		}  elseif ( isset( $_POST['stripe_token'] ) && 'new' !== $_POST['stripe_token'] ) {
+			$stripe_token     = wc_clean( $_POST['stripe_token'] );
+			$maybe_saved_card = isset( $_POST[ 'wb-' . $payment_method . '-new-payment-method' ] ) && ! empty( $_POST[ 'wb-' . $payment_method . '-new-payment-method' ] );
+			// This is true if the user wants to store the card to their account.
+			if ( ( $user_id && $this->saved_cards && $maybe_saved_card ) || $force_save_source ) {
+				$response = $customer->add_source( $stripe_token );
+				if ( ! empty( $response->error ) ) {
+					throw new WB_Stripe_Exception( print_r( $response, true ), $response->error->message );
+				}
+			} else {
+				$set_customer = false;
+				$source_id    = $stripe_token;
+				$is_token     = true;
+			}
+		}
+
+		$test = $customer->get_id();
+		$customer_id = $customer->get_id() ? $customer->get_id() : false;
 
 		if ( empty( $source_object ) && ! $is_token ) {
 			$source_object = self::get_source_object( $source_id );

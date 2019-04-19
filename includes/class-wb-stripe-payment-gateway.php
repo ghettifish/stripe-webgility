@@ -770,7 +770,7 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 				
 				//TO-DO: Link the form submission data for stripe cards.
 				//Link to associated card
-				add_post_meta($order_id, "_linked_token_id", "1", true);
+				//add_post_meta($order_id, "_linked_token_id", "1", true);
 
 
 				//Things are quite a bit different from this original code:
@@ -782,9 +782,8 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 				if ( $this->need_update_idempotency_key( $prepared_source->source_object, $previous_error ) ) {
 					add_filter( 'wb_stripe_idempotency_key', array( $this, 'change_idempotency_key' ), 10, 2 );
 				}
-
-				// Make the request.
-				$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
+			// Make the request.
+			$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
 				
 				if ( ! empty( $response->error ) ) {
 					// Customer param wrong? The user may have been deleted on stripe's end. Remove customer_id. Can be retried without.
@@ -843,6 +842,7 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 
 				do_action( 'wb_gateway_stripe_process_payment', $response, $order );
 
+				//ToDO: Remove this
 				// Process valid response.
 				$this->process_response( $response, $order );
 			} else {
@@ -874,6 +874,47 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 		}
 	}
 
+	/**
+	 *  Bill Customer
+	 * 
+	 */
+	public function bill_customer( $order_id ) {
+		try {
+			$order = wc_get_order( $order_id );
+
+			// Check to make sure the customer exists
+
+			$prepared_source = $this->admin_prepare_source( get_current_user_id(), false);
+			$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
+			
+			if(isset( $response->error) && empty( ! $response->error)) {
+				if("idempotency_error" === $response->error->type) {
+					if($order->get_status() != 'completed') {
+						$order->update_status('completed');
+					}
+					return "This order has been charged successfully already";
+				} else {
+					return "Couldn't complete the payment";
+				}
+			} else {
+				$order->update_status('completed');
+				return "Succesffully Charged Customer";
+			}
+		} catch ( WB_Stripe_Exception $e ) {
+			wc_add_notice( $e->getLocalizedMessage(), 'error' );
+			WB_Stripe_Logger::log( 'Error: ' . $e->getMessage() );
+
+			do_action( 'wc_gateway_stripe_bill_customer_error', $e, $order );
+
+			/* translators: error message */
+			//$order->update_status( 'failed' );
+
+			return array(
+				'result'   => 'fail',
+				'redirect' => '',
+			);
+		} 
+	}
 	/**
 	 * Displays the Stripe fee
 	 *
