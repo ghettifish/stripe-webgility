@@ -98,7 +98,7 @@ class WB_Stripe_Payment_Tokens {
 				$stored_tokens[] = $token->get_token();
 			}
 
-			if ( 'stripe' === $gateway_id ) {
+			if ( 'webgility_stripe' === $gateway_id ) {
 				$stripe_customer = new WB_Stripe_Customer( $customer_id );
 				$stripe_sources  = $stripe_customer->get_sources();
 

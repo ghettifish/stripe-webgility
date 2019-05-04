@@ -16,7 +16,6 @@ jQuery( function( $ ) {
 		 * @return {String}
 		 */
 		getAjaxURL: function( endpoint ) {
-			alert(endpoint)
 			return wb_stripe_payment_request_params.ajax_url
 				.toString()
 				.replace( '%%endpoint%%', 'wb_stripe_' + endpoint );

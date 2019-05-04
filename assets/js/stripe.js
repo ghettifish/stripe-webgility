@@ -252,7 +252,7 @@ jQuery( function( $ ) {
 
 		// Currently only support saved cards via credit cards and SEPA. No other payment method.
 		isStripeSaveCardChosen: function() {
-			return ( $( '#payment_method_webgility_stripe' ).is( ':checked' ) && ( $( 'input[name="wc-stripe-payment-token"]' ).is( ':checked' ) && 'new' !== $( 'input[name="wc-stripe-payment-token"]:checked' ).val() ) ) ||
+			return ( $( '#payment_method_webgility_stripe' ).is( ':checked' ) && ( $( 'input[name="wc-webgility_stripe-payment-token"]' ).is( ':checked' ) && 'new' !== $( 'input[name="wc-webgility_stripe-payment-token"]:checked' ).val() ) ) ||
 				( $( '#payment_method_stripe_sepa' ).is( ':checked' ) && ( $( 'input[name="wc-stripe_sepa-payment-token"]' ).is( ':checked' ) && 'new' !== $( 'input[name="wc-stripe_sepa-payment-token"]:checked' ).val() ) );
 		},
 

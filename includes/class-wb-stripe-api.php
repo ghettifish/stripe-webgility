@@ -97,7 +97,7 @@ class WB_Stripe_API {
 	 * @param array $request
 	 * @param string $api
 	 * @param bool $with_headers To get the response with headers.
-	 * @return array|WP_Error
+	 * @return array|=WP_Error
 	 */
 	public static function request( $request, $api = 'charges', $method = 'POST', $with_headers = false ) {
 		WB_Stripe_Logger::log( "{$api} request: " . print_r( $request, true ) );

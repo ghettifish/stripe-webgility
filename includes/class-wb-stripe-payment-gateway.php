@@ -629,7 +629,7 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 		if ( WB_Stripe_Helper::is_pre_orders_exists() && $this->pre_orders->is_pre_order( $order_id ) && WC_Pre_Orders_Order::order_requires_payment_tokenization( $order_id ) ) {
 			$result = $this->pre_orders->process_pre_order( $order_id );
 		} else {
-			$result = $this->process_payment( $order_id );
+			$result = $this->prepare_payment( $order_id );
 		}
 
 		if ( 'success' === $result['result'] ) {
@@ -661,7 +661,7 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 	}
 
 	/**
-	 * Process the payment
+	 * Complete the payment
 	 *
 	 * @since 1.0.0
 	 * @since 4.1.0 Add 4th parameter to track previous error.
@@ -674,7 +674,7 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 	 *
 	 * @return array|void
 	 */
-	public function process_payment( $order_id, $retry = true, $force_save_source = false, $previous_error = false ) {
+	public function complete_payment( $order_id, $retry = true, $force_save_source = false, $previous_error = false ) {
 		try {
 			$order = wc_get_order( $order_id );
 
@@ -812,14 +812,14 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 						if ( $retry ) {
 							// Don't do anymore retries after this.
 							if ( 2 <= $this->retry_interval ) {
-								return $this->process_payment( $order_id, false, $force_save_source, $response->error );
+								return $this->complete_payment( $order_id, false, $force_save_source, $response->error );
 							}
 
 							sleep( $this->retry_interval );
 
 							$this->retry_interval++;
 
-							return $this->process_payment( $order_id, true, $force_save_source, $response->error );
+							return $this->complete_payment( $order_id, true, $force_save_source, $response->error );
 						} else {
 							$localized_message = __( 'Sorry, we are unable to process your payment at this time. Please retry later.', 'woocommerce-gateway-stripe' );
 							$order->add_order_note( $localized_message );
@@ -875,6 +875,83 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 	}
 
 	/**
+	 * Process the payment
+	 */
+	public function process_payment( $order_id, $retry = true, $force_save_source = false, $previous_error = false ) {
+		try {
+			$order = wc_get_order( $order_id );
+
+			if ( $this->maybe_redirect_stripe_checkout() ) {
+				WB_Stripe_Logger::log( sprintf( 'Redirecting to Stripe Checkout page for order %s', $order_id ) );
+
+				return array(
+					'result'   => 'success',
+					'redirect' => $order->get_checkout_payment_url( true ),
+				);
+			}
+
+			if ( $this->maybe_process_pre_orders( $order_id ) ) {
+				return $this->pre_orders->process_pre_order( $order_id );
+			}
+
+			// This comes from the create account checkbox in the checkout page.
+			$create_account = ! empty( $_POST['createaccount'] ) ? true : false;
+
+			if ( $create_account ) {
+				$new_customer_id     = WB_Stripe_Helper::is_wc_lt( '3.0' ) ? $order->customer_user : $order->get_customer_id();
+				$new_stripe_customer = new WB_Stripe_Customer( $new_customer_id );
+				$new_stripe_customer->create_customer();
+			}
+
+			$prepared_source = $this->prepare_source( get_current_user_id(), $force_save_source );
+
+			// Check if we don't allow prepaid credit cards.
+			if ( ! apply_filters( 'wb_stripe_allow_prepaid_card', true ) && $this->is_prepaid_card( $prepared_source->source_object ) ) {
+				$localized_message = __( 'Sorry, we\'re not accepting prepaid cards at this time. Your credit card has not been charged. Please try with alternative payment method.', 'woocommerce-gateway-stripe' );
+				throw new WB_Stripe_Exception( print_r( $prepared_source->source_object, true ), $localized_message );
+			}
+
+			if ( empty( $prepared_source->source ) ) {
+				$localized_message = __( 'Payment processing failed. Please retry.', 'woocommerce-gateway-stripe' );
+				throw new WB_Stripe_Exception( print_r( $prepared_source, true ), $localized_message );
+			}
+
+ 			$this->save_source_to_order( $order, $prepared_source );
+
+			if ( $order->get_total() > 0 ) {
+				// This will throw exception if not valid.
+				$this->validate_minimum_order_amount( $order );
+
+				WB_Stripe_Logger::log("Info: Set customer to on Hold.");
+				
+			$order->update_status( 'on-hold');
+
+			// Remove cart.
+			WC()->cart->empty_cart();
+
+			// Return thank you page redirect.
+			return array(
+				'result'   => 'success',
+				'redirect' => $this->get_return_url( $order ),
+			);
+			}
+		} catch ( WB_Stripe_Exception $e ) {
+			wc_add_notice( $e->getLocalizedMessage(), 'error' );
+			WB_Stripe_Logger::log( 'Error: ' . $e->getMessage() );
+
+			do_action( 'wc_gateway_stripe_process_payment_error', $e, $order );
+
+			/* translators: error message */
+			$order->update_status( 'failed' );
+
+			return array(
+				'result'   => 'fail',
+				'redirect' => '',
+			);
+		}
+	}
+
+	/**
 	 *  Bill Customer
 	 * 
 	 */
@@ -883,8 +960,16 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 			$order = wc_get_order( $order_id );
 
 			// Check to make sure the customer exists
-
-			$prepared_source = $this->admin_prepare_source( get_current_user_id(), false);
+			$whodis = $order->get_user_id();
+			$prepared_source = $this->admin_prepare_source( $order->get_user_id(), false);
+			$source_id = get_post_meta( $order_id, '_stripe_source_id', true );
+			$prepared_source->source = $source_id;
+			$prepared_source = (object) array(
+				'token_id'      => "",
+				'customer'      => "",
+				'source'        => $source_id,
+				'source_object' => "",
+			);
 			$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
 			
 			if(isset( $response->error) && empty( ! $response->error)) {
@@ -894,11 +979,12 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 					}
 					return "This order has been charged successfully already";
 				} else {
-					return "Couldn't complete the payment";
+					add_notice( "Couldn't complete the payment");
+					$order->update_status('failed');
 				}
 			} else {
 				$order->update_status('completed');
-				return "Succesffully Charged Customer";
+				return "Succesfully Charged Customer";
 			}
 		} catch ( WB_Stripe_Exception $e ) {
 			wc_add_notice( $e->getLocalizedMessage(), 'error' );
