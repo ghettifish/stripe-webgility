@@ -212,14 +212,14 @@ class WB_Stripe_Customer {
 					case 'sepa_debit':
 						$wc_token = new WC_Payment_Token_SEPA();
 						$wc_token->set_token( $response->id );
-						$wc_token->set_gateway_id( 'stripe_sepa' );
+						$wc_token->set_gateway_id( 'webgility_stripe_sepa' );
 						$wc_token->set_last4( $response->sepa_debit->last4 );
 						break;
 					default:
 						if ( 'source' === $response->object && 'card' === $response->type ) {
 							$wc_token = new WC_Payment_Token_CC();
 							$wc_token->set_token( $response->id );
-							$wc_token->set_gateway_id( 'stripe' );
+							$wc_token->set_gateway_id( 'webgility_stripe' );
 							$wc_token->set_card_type( strtolower( $response->card->brand ) );
 							$wc_token->set_last4( $response->card->last4 );
 							$wc_token->set_expiry_month( $response->card->exp_month );
@@ -231,7 +231,7 @@ class WB_Stripe_Customer {
 				// Legacy.
 				$wc_token = new WC_Payment_Token_CC();
 				$wc_token->set_token( $response->id );
-				$wc_token->set_gateway_id( 'stripe' );
+				$wc_token->set_gateway_id( 'webgility_stripe' );
 				$wc_token->set_card_type( strtolower( $response->brand ) );
 				$wc_token->set_last4( $response->last4 );
 				$wc_token->set_expiry_month( $response->exp_month );

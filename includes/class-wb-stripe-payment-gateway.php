@@ -964,18 +964,19 @@ class WB_Gateway_Stripe extends WB_Stripe_Payment_Gateway {
 			$prepared_source = $this->admin_prepare_source( $order->get_user_id(), false);
 			$source_id = get_post_meta( $order_id, '_stripe_source_id', true );
 			$prepared_source->source = $source_id;
-			$prepared_source = (object) array(
-				'token_id'      => "",
-				'customer'      => "",
-				'source'        => $source_id,
-				'source_object' => "",
-			);
+			//Commented this out so that I could get an order with a saved payment through.
+			// $prepared_source = (object) array(
+			// 	'token_id'      => "",
+			// 	'customer'      => "",
+			// 	'source'        => $source_id,
+			// 	'source_object' => "",
+			// );
 			$response = WB_Stripe_API::request( $this->generate_payment_request( $order, $prepared_source ) );
 			
 			if(isset( $response->error) && empty( ! $response->error)) {
 				if("idempotency_error" === $response->error->type) {
-					if($order->get_status() != 'completed') {
-						$order->update_status('completed');
+					if($order->get_status() != 'failed') {
+						$order->update_status('failed');
 					}
 					return "This order has been charged successfully already";
 				} else {

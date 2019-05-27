@@ -361,7 +361,7 @@ abstract class WB_Stripe_Payment_Gateway extends WC_Payment_Gateway_CC {
 			$post_data['receipt_email'] = $billing_email;
 		}
 
-		switch ( WB_Stripe_Helper::is_wc_lt( '3.0' ) ? $order->payment_method : $order->get_payment_method() ) {
+		switch ( WB_Stripe_Helper::is_wc_lt( '3.0' ) ? $order->get_payment_method() : $order->get_payment_method() ) {
 			case 'stripe':
 				if ( ! empty( $statement_descriptor ) ) {
 					$post_data['statement_descriptor'] = WB_Stripe_Helper::clean_statement_descriptor( $statement_descriptor );
@@ -628,9 +628,9 @@ abstract class WB_Stripe_Payment_Gateway extends WC_Payment_Gateway_CC {
 	 * @return bool
 	 */
 	public function is_using_saved_payment_method() {
-		$payment_method = isset( $_POST['payment_method'] ) ? wc_clean( $_POST['payment_method'] ) : 'stripe';
+		$payment_method = isset( $_POST['payment_method'] ) ? wc_clean( $_POST['payment_method'] ) : 'webgility_stripe';
 
-		return ( isset( $_POST[ 'wb-' . $payment_method . '-payment-token' ] ) && 'new' !== $_POST[ 'wb-' . $payment_method . '-payment-token' ] );
+		return ( isset( $_POST[ 'wc-' . $payment_method . '-payment-token' ] ) && 'new' !== $_POST[ 'wc-' . $payment_method . '-payment-token' ] );
 	}
 
 	/**
@@ -704,9 +704,10 @@ abstract class WB_Stripe_Payment_Gateway extends WC_Payment_Gateway_CC {
 					throw new WB_Stripe_Exception( print_r( $response, true ), $response->error->message );
 				}
 			}
-		} elseif ( $this->is_using_saved_payment_method() ) {
+		} 
+		elseif ( $this->is_using_saved_payment_method() ) {
 			// Use an existing token, and then process the payment.
-			$wc_token_id = wc_clean( $_POST[ 'wb-' . $payment_method . '-payment-token' ] );
+			$wc_token_id = wc_clean( $_POST[ 'wc-' . $payment_method . '-payment-token' ] );
 			$wc_token    = WC_Payment_Tokens::get( $wc_token_id );
 
 			if ( ! $wc_token || $wc_token->get_user_id() !== get_current_user_id() ) {
